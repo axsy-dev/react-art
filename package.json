@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "art": "^0.10.0",
-    "fbjs": "^0.2.0"
+    "fbjs": "^0.6.0"
   },
   "peerDependencies": {
     "react": "^0.13.0 || ^0.14.0-a"
