@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2014 Facebook, Inc.
+ * Copyright (c) 2013-present Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -11,14 +11,14 @@
 
 /*jslint evil: true */
 
-"use strict";
+'use strict';
 
-require('mock-modules')
-  .dontMock('ReactART');
+jest
+  .unmock('ReactART');
 
-var React;
-var ReactTestUtils;
-var ReactDOM;
+var React = require('react');
+var ReactDOM = require('react-dom');
+var ReactTestUtils = require('react-addons-test-utils');
 
 var Group;
 var Shape;
@@ -26,6 +26,10 @@ var Surface;
 var TestComponent;
 
 var Missing = {};
+
+var ReactART = require('ReactART');
+var ARTSVGMode = require('art/modes/svg');
+var ARTCurrentMode = require('art/modes/current');
 
 function testDOMNodeStructure(domNode, expectedStructure) {
   expect(domNode).toBeDefined();
@@ -50,14 +54,6 @@ function testDOMNodeStructure(domNode, expectedStructure) {
 describe('ReactART', function() {
 
   beforeEach(function() {
-    React = require('react');
-    ReactTestUtils = require('react/lib/ReactTestUtils');
-    ReactDOM = require('react-dom');
-
-    var ReactART = require('ReactART');
-    var ARTSVGMode = require('art/modes/svg');
-    var ARTCurrentMode = require('art/modes/current');
-
     ARTCurrentMode.setCurrent(ARTSVGMode);
 
     Group = ReactART.Group;
@@ -65,7 +61,6 @@ describe('ReactART', function() {
     Surface = ReactART.Surface;
 
     TestComponent = React.createClass({
-
       render: function() {
 
         var a =
@@ -102,7 +97,6 @@ describe('ReactART', function() {
         );
       }
     });
-
   });
 
   it('should have the correct lifecycle state', function() {
@@ -118,23 +112,23 @@ describe('ReactART', function() {
     instance = ReactTestUtils.renderIntoDocument(instance);
 
     var expectedStructure = {
-      nodeName: 'SVG',
+      nodeName: 'svg',
       width: '150',
       height: '200',
       children: [
-        { nodeName: 'DEFS' },
+        { nodeName: 'defs' },
         {
-          nodeName: 'G',
+          nodeName: 'g',
           children: [
             {
-              nodeName: 'DEFS',
+              nodeName: 'defs',
               children: [
-                { nodeName: 'LINEARGRADIENT' }
+                { nodeName: 'linearGradient' }
               ]
             },
-            { nodeName: 'PATH' },
-            { nodeName: 'PATH' },
-            { nodeName: 'G' }
+            { nodeName: 'path' },
+            { nodeName: 'path' },
+            { nodeName: 'g' }
           ]
         }
       ]
@@ -149,16 +143,16 @@ describe('ReactART', function() {
     var instance = ReactDOM.render(<TestComponent flipped={false} />, container);
 
     var expectedStructure = {
-      nodeName: 'SVG',
+      nodeName: 'svg',
       children: [
-        { nodeName: 'DEFS' },
+        { nodeName: 'defs' },
         {
-          nodeName: 'G',
+          nodeName: 'g',
           children: [
-            { nodeName: 'DEFS' },
-            { nodeName: 'PATH', opacity: '0.1' },
-            { nodeName: 'PATH', opacity: Missing },
-            { nodeName: 'G' }
+            { nodeName: 'defs' },
+            { nodeName: 'path', opacity: '0.1' },
+            { nodeName: 'path', opacity: Missing },
+            { nodeName: 'g' }
           ]
         }
       ]
@@ -170,22 +164,50 @@ describe('ReactART', function() {
     ReactDOM.render(<TestComponent flipped={true} />, container);
 
     var expectedNewStructure = {
-      nodeName: 'SVG',
+      nodeName: 'svg',
       children: [
-        { nodeName: 'DEFS' },
+        { nodeName: 'defs' },
         {
-          nodeName: 'G',
+          nodeName: 'g',
           children: [
-            { nodeName: 'DEFS' },
-            { nodeName: 'PATH', opacity: Missing },
-            { nodeName: 'PATH', opacity: '0.1' },
-            { nodeName: 'G' }
+            { nodeName: 'defs' },
+            { nodeName: 'path', opacity: Missing },
+            { nodeName: 'path', opacity: '0.1' },
+            { nodeName: 'g' }
           ]
         }
       ]
     };
 
     testDOMNodeStructure(realNode, expectedNewStructure);
+  });
+
+  it('should be able to reorder many components', function() {
+    var container = document.createElement('div');
+
+    var Component = React.createClass({
+      render: function() {
+        var chars = this.props.chars.split('');
+        return (
+          <Surface>
+            {chars.map((text) => <Shape key={text} title={text} />)}
+          </Surface>
+        );
+      },
+    });
+
+    // Mini multi-child stress test: lots of reorders, some adds, some removes.
+    var before = 'abcdefghijklmnopqrst';
+    var after = 'mxhpgwfralkeoivcstzy';
+
+    var instance = ReactDOM.render(<Component chars={before} />, container);
+    var realNode = ReactDOM.findDOMNode(instance);
+    expect(realNode.textContent).toBe(before);
+
+    instance = ReactDOM.render(<Component chars={after} />, container);
+    expect(realNode.textContent).toBe(after);
+
+    ReactDOM.unmountComponentAtNode(container);
   });
 
   it('renders composite with lifecycle inside group', function() {
